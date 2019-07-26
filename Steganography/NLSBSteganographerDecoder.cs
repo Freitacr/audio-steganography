@@ -25,14 +25,12 @@ namespace AudioSteganography
         {
             private FileInDecodingStream AudioFileStream;
             private Stream DataFileStreamOut;
-            private int BitPermutationIndicesRemaining { get { return DataFileSize - IndicesUsed; } }
-            private List<int> BitPermutationIndices = new List<int>();
-            private int IndicesUsed = 0;
-            private LinkedList<DataFileByteBitAssociation> ByteBitAssociations = new LinkedList<DataFileByteBitAssociation>();
-            private Dictionary<int, DataFileByteBitAssociation> HashedAssociations = new Dictionary<int, DataFileByteBitAssociation>();
             private KeyedRng Rng;
-            private int HighestConsecutivePositionProcessed = -1;
             private int DataFileSize = -1;
+            private Dictionary<uint, DataByteMapping> PositionMapping = new Dictionary<uint, DataByteMapping>();
+            private List<DataByteMapping> DataFileBytes = new List<DataByteMapping>();
+            private uint AudioTotalSamples;
+            private uint TotalSamplesRead = 0;
 
             public NLSBSteganographerDecoder(FileInDecodingStream audioFileStream, Stream dataFileStreamOut, byte[] key)
             {
@@ -54,17 +52,33 @@ namespace AudioSteganography
                     {
                         if (metadata.GetComment(i).FieldName == "LEN")
                         {
-                            DataFileSize = int.Parse(metadata.GetComment(i).FieldValue) * 8;
+                            DataFileSize = int.Parse(metadata.GetComment(i).FieldValue);
                             for (int j = 0; j < DataFileSize; j++)
-                                BitPermutationIndices.Add(j);
+                                GenerateMapping();
                             return;
                         }
                     }
                 } else if (metadataIn.MetadataType == FlaCdotNet.MetadataType.StreamInfo)
                 {
                     var metadata = metadataIn as StreamInfo;
-                    StreamInfoPrinter.PrintStreamInfoConsole(metadata);
+                    AudioTotalSamples = (uint)(metadata.GetChannels() * metadata.GetTotalSamples());
                 }
+            }
+
+            private void GenerateMapping()
+            {
+                DataByteMapping ret = new DataByteMapping(0);
+                for (int i = 0; i < 8; i++)
+                {
+                    uint generated = Rng.Next(AudioTotalSamples);
+                    while (PositionMapping.ContainsKey(generated))
+                    {
+                        generated = Rng.Next(AudioTotalSamples);
+                    };
+                    ret.MappedBytes[i] = generated;
+                    PositionMapping[generated] = ret;
+                }
+                DataFileBytes.Add(ret);
             }
 
             private byte UpdateByteWithBit(byte byteIn, bool bitIn, int bitPosition)
@@ -79,85 +93,26 @@ namespace AudioSteganography
                 return (byteIn & 0x1) != 0;
             }
 
-            private void CheckAssociationsForConsecutivity()
+            private void AudioWriteCallback(int[] samplesIn)
             {
-                bool checkNextByte = true;
-                while (checkNextByte)
+                for (int i = 0; i < samplesIn.Length; i++)
                 {
-                    checkNextByte = false;
-                    int checkFor = HighestConsecutivePositionProcessed + 1;
-                    var validAssociations = new List<DataFileByteBitAssociation>();
-                    for (int i = 0; i < 8; i++)
+                    if (PositionMapping.TryGetValue((uint)(i+TotalSamplesRead), out DataByteMapping mappedVal))
                     {
-                        int bitPos = checkFor + i;
-                        if (HashedAssociations.TryGetValue(bitPos, out var curr))
-                        {
-                            validAssociations.Add(curr);
-                        }
-                        else break;
-                    }
-                    if (validAssociations.Count == 8)
-                    {
-                        byte toWrite = 0x0;
-                        checkNextByte = true;
-                        foreach (var assoc in validAssociations)
-                        {
-                            toWrite = UpdateByteWithBit(toWrite, assoc.BitValue, assoc.DataFileBitPosition % 8);
-                            HashedAssociations.Remove(assoc.DataFileBitPosition);
-                        }
-                        DataFileStreamOut.WriteByte(toWrite);
-                        HighestConsecutivePositionProcessed += 8;
+                        var byteMapping = mappedVal.TryGetByteMapping((uint)(i + TotalSamplesRead), AudioTotalSamples + 1);
+                        bool lsb = ExtractLSB(samplesIn[i]);
+                        mappedVal.DataFileByte = UpdateByteWithBit(mappedVal.DataFileByte, lsb, byteMapping.BitPosition);
                     }
                 }
+                TotalSamplesRead += (uint)samplesIn.Length;
             }
 
-            private void AudioFileWriteCallback(int[] samplesIn)
+            public void ProcessAudioFile()
             {
-                if (BitPermutationIndicesRemaining == 0)
-                {
-                    BitPermutationIndices.Clear();
-                    return;
-                }
-                foreach (int sample in samplesIn)
-                {
-                    if (BitPermutationIndices.Count - IndicesUsed == 0)
-                        continue;
-                    int generatedIndex = Rng.Next(BitPermutationIndicesRemaining);
-                    int bitPosition = BitPermutationIndices[generatedIndex];
-                    IndicesUsed++;
-                    int temp = BitPermutationIndices[generatedIndex];
-                    BitPermutationIndices[generatedIndex] = BitPermutationIndices[BitPermutationIndicesRemaining];
-                    BitPermutationIndices[BitPermutationIndicesRemaining] = temp;
-                    HashedAssociations[bitPosition] = new DataFileByteBitAssociation(bitPosition, ExtractLSB(sample));
-                }
-                CheckAssociationsForConsecutivity();
+                AudioFileStream.ReadFile(AudioWriteCallback);
+                foreach (DataByteMapping b in DataFileBytes)
+                    DataFileStreamOut.WriteByte(b.DataFileByte);
             }
-
-            public List<int> GetPermutationIndicies(int numGenerate)
-            {
-                BitPermutationIndices = new List<int>();
-                for (int i = 0; i < numGenerate; i++)
-                    BitPermutationIndices.Add(i);
-                List<int> ret = new List<int>();
-                for (int i = 0; i < numGenerate; i++)
-                {
-                    int remaining = numGenerate - i;
-                    int generatedIndex = Rng.Next(remaining);
-                    ret.Add(BitPermutationIndices[generatedIndex]);
-                    int temp = BitPermutationIndices[generatedIndex];
-                    BitPermutationIndices[generatedIndex] = BitPermutationIndices[remaining-1];
-                    BitPermutationIndices[remaining-1] = temp;
-                }
-                return ret;
-            }
-
-            public void ProcessFile()
-            {
-                Console.WriteLine("Decoder's Decoder info:");
-                AudioFileStream.ReadFile(AudioFileWriteCallback);
-            }
-
-            
         }
     }
 }

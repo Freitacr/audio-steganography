@@ -98,10 +98,10 @@ namespace AudioSteganography
             AudioFileInStream.ClearReadData();
             SetupOutputStream(dataFileSize);
             AudioFileInStream.Reset();
-            AudioFileInStream.MetadataCallback = NLSBSteganographerEncoder.MetadataCallback;
+            //AudioFileInStream.MetadataCallback = NLSBSteganographerEncoder.MetadataCallback;
             AudioFileInStream.Initialize(AudioFileName);
             AudioFileInStream.ProgressCallback = ProgressCallback;
-            MainWorkerThread = new Thread(new ParameterizedThreadStart(x => { Encoder.ProcessFile(WriteCallback); CleanupEncoder(); }));
+            MainWorkerThread = new Thread(new ParameterizedThreadStart(x => { Encoder.ProcessAudiofile(WriteCallback); CleanupEncoder(); }));
         }
 
         private void InsertDataButton_Click(object sender, EventArgs e)
@@ -146,7 +146,7 @@ namespace AudioSteganography
             );
             AudioFileInStream.Initialize(AudioFileName);
             AudioFileInStream.ProgressCallback = ProgressCallback;
-            MainWorkerThread = new Thread(new ParameterizedThreadStart(x => { Decoder.ProcessFile(); CleanupDecoder(); }));
+            MainWorkerThread = new Thread(new ParameterizedThreadStart(x => { Decoder.ProcessAudioFile(); CleanupDecoder(); }));
         }
 
         private void CleanupDecoder()

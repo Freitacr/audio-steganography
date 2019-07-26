@@ -47,5 +47,13 @@ namespace AudioSteganography.Helper
             }
             return ret;
         }
+
+        public static int ModifyIntLSB(int byteIn, bool lsbValue)
+        {
+            int lsb = lsbValue ? 0x1 : 0x0;
+            int mask = 0xfe;
+            int res = byteIn & mask;
+            return res | lsb;
+        }
     }
 }

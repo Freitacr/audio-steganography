@@ -65,6 +65,12 @@ namespace AudioSteganography
                 return ret;
             }
 
+            public uint Next(uint maxValue)
+            {
+                int ret = (int)(InternalState % (ulong)maxValue);
+                PerformStateUpdate();
+                return (uint)ret;
+            }
         }
     }
 }
