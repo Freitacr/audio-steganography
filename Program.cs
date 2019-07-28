@@ -2,14 +2,21 @@
 using System.Runtime;
 using System.Windows.Forms;
 using System.Collections.Generic;
-using AudioSteganography.Audio.Wave;
+using AudioSteganography.Audio.Flac;
 using AudioSteganography.Helper;
 
 namespace AudioSteganography
 {
     
+    
+
     static class Program
     {
+
+        static void ProcessMetadata(MetadataBlock blockIn)
+        {
+            Console.WriteLine(blockIn.MetadataType.ToString());
+        }
 
         /// <summary>
         /// The main entry point for the application.
@@ -17,18 +24,21 @@ namespace AudioSteganography
         [STAThread]
         static void Main()
         {
+            
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            /*
+            
             OpenFileDialog dlg = new OpenFileDialog();
-            dlg.Filter = "WAV Files (*.wav)|*.wav";
+            dlg.Filter = "FLAC Files (*.flac)|*.flac";
             dlg.ShowDialog();
             if (dlg.FileName == "")
                 return;
-            WaveFileDecoder dec = new WaveFileDecoder(dlg.FileName);
-            dec.DecodeFile(new Action<byte[]>(unused => { return; }));
-            */
-            Application.Run(new MainForm());
+            FlacDecoderStream stream = new FlacDecoderStream();
+            stream.InitializeFile(dlg.FileName);
+            stream.MetadataCallback = ProcessMetadata;
+            stream.ReadMetadata();
+            
+            //Application.Run(new MainForm());
         }
     }
 }

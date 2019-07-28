@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using AudioSteganography.Helper;
 
 namespace AudioSteganography.Audio.Flac
 {
@@ -16,20 +17,35 @@ namespace AudioSteganography.Audio.Flac
             UNKNOWN
         }
 
-        public int Length { get; private set; } = 0;
-        public bool IsLast { get; private set; } = false;
-        public BLOCK_TYPE MetadataType { get; private set; } = BLOCK_TYPE.UNKNOWN;
-        public byte[] Data { get; private set; }
+        public int Length { get; protected set; } = 0;
+        public bool IsLast { get; protected set; } = false;
+        public BLOCK_TYPE MetadataType { get; protected set; } = BLOCK_TYPE.UNKNOWN;
+        public byte[] Data { get; protected set; }
 
-        public void ReadMetadataBlock(BinaryReader readerIn)
+        public static MetadataBlock ReadMetadataBlock(Stream readerIn)
         {
-            int header = readerIn.ReadInt32();
-            IsLast = MetadataBlockHelper.ExtractIsLast(header);
-            MetadataType = MetadataBlockHelper.ExtractBlockType(header);
-            Length = MetadataBlockHelper.ExtractLength(header);
-            Data = new byte[Length];
-            for (int i = 0; i < Data.Length; i++)
-                Data[i] = readerIn.ReadByte();
+            MetadataBlock readBlock = new MetadataBlock();
+            int header = ByteHelper.ReadInt32(readerIn);
+            readBlock.IsLast = MetadataBlockHelper.ExtractIsLast(header);
+            readBlock.MetadataType = MetadataBlockHelper.ExtractBlockType(header);
+            readBlock.Length = MetadataBlockHelper.ExtractLength(header);
+            readBlock.Data = new byte[readBlock.Length];
+            for (int i = 0; i < readBlock.Data.Length; i++)
+                readBlock.Data[i] = (byte)readerIn.ReadByte();
+            return SubclassMetadataBlock(readBlock);
+        }
+
+        private static MetadataBlock SubclassMetadataBlock(MetadataBlock blockIn)
+        {
+            switch(blockIn.MetadataType)
+            {
+                case BLOCK_TYPE.STREAMINFO:
+                    return new StreamInfo(blockIn);
+                case BLOCK_TYPE.VORBIS_COMMENT:
+                    return new VorbisComment(blockIn);
+                default:
+                    return blockIn;
+            }
         }
     }
 
@@ -37,14 +53,14 @@ namespace AudioSteganography.Audio.Flac
     {
         public static bool ExtractIsLast(int headerIn)
         {
-            int mask = 0x8000;
+            int mask = 0x8000000 << 4;
             int res = mask & headerIn;
             return res != 0;
         }
 
         public static MetadataBlock.BLOCK_TYPE ExtractBlockType(int headerIn)
         {
-            int mask = 0x7f000;
+            int mask = 0x7f000000;
             int res = (mask & headerIn) >> 24;
             switch (res)
             {

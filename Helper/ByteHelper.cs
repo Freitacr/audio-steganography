@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace AudioSteganography.Helper
 {
@@ -48,12 +49,55 @@ namespace AudioSteganography.Helper
             return ret;
         }
 
+        public static long BytesToLong(byte[] bytes)
+        {
+            long ret = 0;
+            for (int i = 0; i < 8; i++)
+            {
+                long curr = bytes[i];
+                ret |= curr << (56 - (8 * i));
+            }
+            return ret;
+        }
+
+        public static short BytesToShort(byte[] bytes)
+        {
+            short ret = 0;
+            for (int i = 0; i < 2; i++)
+            {
+                int curr = bytes[i];
+                ret |= (short)(curr << (8 - (8 * i)));
+            }
+            return ret;
+        }
+
         public static int ModifyIntLSB(int byteIn, bool lsbValue)
         {
             int lsb = lsbValue ? 0x1 : 0x0;
             int mask = 0xfe;
             int res = byteIn & mask;
             return res | lsb;
+        }
+
+        public static int ReadInt32(Stream streamIn)
+        {
+            byte[] readInt = new byte[4];
+            streamIn.Read(readInt, 0, 4);
+            return BytesToInt(readInt);
+        }
+
+        public static int ReadInt16(Stream streamIn)
+        {
+            byte[] readShort = new byte[2];
+            streamIn.Read(readShort, 0, 2);
+            return BytesToShort(readShort);
+        }
+
+        public static long ReadInt64(Stream streamIn)
+        {
+            byte[] readLong = new byte[8];
+            streamIn.Read(readLong, 0, 8);
+            return BytesToLong(readLong);
         }
     }
 }

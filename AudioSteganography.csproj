@@ -89,7 +89,13 @@
   <ItemGroup>
     <Compile Include="Audio\FileInDecodingStream.cs" />
     <Compile Include="Audio\FileOutEncodingStream.cs" />
+    <Compile Include="Audio\Flac\FlacAudioFrame.cs" />
+    <Compile Include="Audio\Flac\FlacDecoderStream.cs" />
+    <Compile Include="Audio\Flac\FlacSubFrame.cs" />
+    <Compile Include="Audio\Flac\ImproperFormatException.cs" />
     <Compile Include="Audio\Flac\MetadataBlock.cs" />
+    <Compile Include="Audio\Flac\StreamInfoBlock.cs" />
+    <Compile Include="Audio\Flac\VorbisComment.cs" />
     <Compile Include="Audio\Wave\WaveFileHeader.cs" />
     <Compile Include="Audio\Wave\WavFileDecoder.cs" />
     <Compile Include="Helper\ByteHelper.cs" />
@@ -153,7 +159,6 @@
       <Install>false</Install>
     </BootstrapperPackage>
   </ItemGroup>
-  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\FlaCdotNet.1.0.0\build\FlaCdotNet.targets" Condition="Exists('..\packages\FlaCdotNet.1.0.0\build\FlaCdotNet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
