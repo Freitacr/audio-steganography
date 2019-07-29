@@ -62,6 +62,13 @@ namespace AudioSteganography.Audio.Flac
             if (ReadCallback == null)
                 throw new ArgumentNullException("readCallback", "ReadCallback was not set before calling, and was not supplied to this function");
             //Start reading audio frames
+            FlacAudioFrame currFrame = new FlacAudioFrame(this);
+            currFrame.ParseAudioFrame(FileStream);
+        }
+
+        public List<MetadataBlock>.Enumerator GetMetadataEnumerator()
+        {
+            return MetadataBlocks.GetEnumerator();
         }
     }
 }

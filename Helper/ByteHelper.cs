@@ -40,35 +40,36 @@ namespace AudioSteganography.Helper
 
         public static int BytesToInt(byte[] bytes)
         {
-            int ret = 0;
+            uint ret = 0;
             for (int i = 0; i < 4; i++)
             {
-                int curr = bytes[i];
+                uint curr = bytes[i];
                 ret |= curr << (24 - (8 * i));
             }
-            return ret;
+            return (int)ret;
         }
 
         public static long BytesToLong(byte[] bytes)
         {
-            long ret = 0;
+            ulong ret = 0;
             for (int i = 0; i < 8; i++)
             {
-                long curr = bytes[i];
+                ulong curr = bytes[i];
                 ret |= curr << (56 - (8 * i));
             }
-            return ret;
+            return (long)ret;
         }
 
-        public static short BytesToShort(byte[] bytes)
+        public static ushort BytesToShort(byte[] bytes)
         {
-            short ret = 0;
+            ushort ret = 0;
             for (int i = 0; i < 2; i++)
             {
-                int curr = bytes[i];
-                ret |= (short)(curr << (8 - (8 * i)));
+                ushort curr = bytes[i];
+                ushort res = (ushort)(curr << (8 - (8 * i)));
+                ret |= (ushort)res;
             }
-            return ret;
+            return (ushort)(ret & 0x0000ffff);
         }
 
         public static int ModifyIntLSB(int byteIn, bool lsbValue)

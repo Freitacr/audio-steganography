@@ -53,7 +53,7 @@ namespace AudioSteganography.Audio.Flac
         private void ParseMinBlockSize()
         {
             byte[] sizeBytes = new byte[] { Data[0], Data[1] };
-            MinimumBlockSize = ByteHelper.BytesToShort(sizeBytes);
+            MinimumBlockSize = (short)ByteHelper.BytesToShort(sizeBytes);
             if ((MinimumBlockSize & 0x0f) != 0)
                 throw new ImproperFormatException("Minimum block size used invalid bits");
         }
@@ -61,7 +61,7 @@ namespace AudioSteganography.Audio.Flac
         private void ParseMaxBlockSize()
         {
             byte[] sizeBytes = new byte[] { Data[2], Data[3] };
-            MaximumBlockSize = ByteHelper.BytesToShort(sizeBytes);
+            MaximumBlockSize = (short)ByteHelper.BytesToShort(sizeBytes);
             if ((MaximumBlockSize & 0x0f) != 0)
                 throw new ImproperFormatException("Maximum block size used invalid bits");
         }

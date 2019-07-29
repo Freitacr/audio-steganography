@@ -22,6 +22,17 @@ namespace AudioSteganography.Audio.Flac
         FRAME_NUMBER
     }
 
+    public enum CHANNEL_ASSIGNMENT
+    {
+        /**
+         * <summary>If this is the CHANNEL_ASSIGNMENT, then the value of ChannelAssignment in a FlacAudioFrame is the number of channels</summary>
+         */
+        SMPTE_CHANNEL_RECOMMENDATION,
+        LEFT_SIDE_STEREO,
+        RIGHT_SIDE_STEREO,
+        MID_SIDE_STEREO
+    }
+
     public class FlacAudioFrame
     {
         private short SyncCode;
@@ -32,6 +43,7 @@ namespace AudioSteganography.Audio.Flac
         public int SampleSize { get; private set; }
         public long PositionValue { get; private set; }
         public POSITION_VALUE PositionValueType {get; private set;}
+        public CHANNEL_ASSIGNMENT ChannelAssignmentType { get; private set; }
         public byte CRC { get; private set; }
         public FlacAudioFrameFooter Footer { get; private set; }
         private FlacDecoderStream ParentStream;
@@ -53,13 +65,17 @@ namespace AudioSteganography.Audio.Flac
             ParseChannelAssignmentAndSampleSize(streamIn);
             ParseSampleOrFrameNumber(streamIn);
             UpdateBlockSizeToTrueValue(streamIn);
+            UpdateSampleRateToTrueValue(streamIn);
+            UpdateChannelAssignmentToTrueValue();
+            UpdateSampleSizeToTrueValue();
+            ReadCRC(streamIn);
         }
 
         private void ParseSyncCodeAndBlockingStrategy(Stream streamIn)
         {
             byte[] readBytes = new byte[2];
             streamIn.Read(readBytes, 0, 2);
-            short headerVal = ByteHelper.BytesToShort(readBytes);
+            ushort headerVal = ByteHelper.BytesToShort(readBytes);
             if ((headerVal ^ 0xfff8) != 0)
                 throw new ImproperFormatException("Audio Frame Sync Code was incorrect");
             SyncCode = (short)(headerVal & 0xfff8);
@@ -157,7 +173,7 @@ namespace AudioSteganography.Audio.Flac
                     InterChannelSampleBlockSize++;
                     break;
                 default:
-                    InterChannelSampleBlockSize = (576) * (int)(Math.Pow(2, InterChannelSampleBlockSize - 8));
+                    InterChannelSampleBlockSize = (256) * (int)(Math.Pow(2, InterChannelSampleBlockSize - 8));
                     break;
             }
         }
@@ -166,29 +182,124 @@ namespace AudioSteganography.Audio.Flac
         {
             switch(SampleRate)
             {
-
+                case 0:
+                    List<MetadataBlock>.Enumerator metadataEnum = ParentStream.GetMetadataEnumerator();
+                    metadataEnum.MoveNext();
+                    SampleRate = (metadataEnum.Current as StreamInfo).SampleRateHz;
+                    break;
+                case 1:
+                    SampleRate = 88200;
+                    break;
+                case 2:
+                    SampleRate = 176400;
+                    break;
+                case 3:
+                    SampleRate = 192000;
+                    break;
+                case 4:
+                    SampleRate = 8000;
+                    break;
+                case 5:
+                    SampleRate = 16000;
+                    break;
+                case 6:
+                    SampleRate = 22050;
+                    break;
+                case 7:
+                    SampleRate = 24000;
+                    break;
+                case 8:
+                    SampleRate = 32000;
+                    break;
+                case 9:
+                    SampleRate = 44100;
+                    break;
+                case 10:
+                    SampleRate = 48000;
+                    break;
+                case 11:
+                    SampleRate = 96000;
+                    break;
+                case 12:
+                    byte sampleRate = (byte)streamIn.ReadByte();
+                    SampleRate = sampleRate * 1000;
+                    break;
+                case 13:
+                    byte[] sampleRateBytes = new byte[2];
+                    streamIn.Read(sampleRateBytes, 0, 2);
+                    SampleRate = ByteHelper.BytesToShort(sampleRateBytes);
+                    break;
+                case 14:
+                    byte[] sampleRateHzBytes = new byte[2];
+                    streamIn.Read(sampleRateHzBytes, 0, 2);
+                    SampleRate = ByteHelper.BytesToShort(sampleRateHzBytes) * 10;
+                    break;
+                default:
+                    throw new ImproperFormatException("Sample Rate was invalid");
             }
         }
 
-        private void ParseDefinedBlockSizeAndSampleRate(Stream streamIn)
+        private void UpdateChannelAssignmentToTrueValue()
         {
-            if (InterChannelSampleBlockSize == 6)
+            switch(ChannelAssignment)
             {
-                
-            } else if (InterChannelSampleBlockSize == 7)
-            {
-                
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                case 7:
+                    ChannelAssignmentType = CHANNEL_ASSIGNMENT.SMPTE_CHANNEL_RECOMMENDATION;
+                    ChannelAssignment++;
+                    break;
+                case 8:
+                    ChannelAssignmentType = CHANNEL_ASSIGNMENT.LEFT_SIDE_STEREO;
+                    break;
+                case 9:
+                    ChannelAssignmentType = CHANNEL_ASSIGNMENT.RIGHT_SIDE_STEREO;
+                    break;
+                case 10:
+                    ChannelAssignmentType = CHANNEL_ASSIGNMENT.MID_SIDE_STEREO;
+                    break;
+                default:
+                    throw new ImproperFormatException("Reserved value found for channel assignment value");
             }
-            if (SampleRate == 12)
-            {
+        }
 
-            } else if (SampleRate == 13)
+        private void UpdateSampleSizeToTrueValue()
+        {
+            switch(SampleSize)
             {
-
-            } else if (SampleRate == 14)
-            {
-
+                case 0:
+                    var enumerator = ParentStream.GetMetadataEnumerator();
+                    enumerator.MoveNext();
+                    SampleSize = (enumerator.Current as StreamInfo).BitsPerSample;
+                    break;
+                case 1:
+                    SampleSize = 8;
+                    break;
+                case 2:
+                    SampleSize = 12;
+                    break;
+                case 4:
+                    SampleSize = 16;
+                    break;
+                case 5:
+                    SampleSize = 20;
+                    break;
+                case 6:
+                    SampleSize = 24;
+                    break;
+                default:
+                    throw new ImproperFormatException("Sample size was a reserved value and is invalid");
             }
+        }
+
+        private void ReadCRC(Stream streamIn)
+        {
+            CRC = (byte)streamIn.ReadByte();
         }
     }
 

@@ -28,10 +28,20 @@ namespace AudioSteganography.Audio.Flac
             int header = ByteHelper.ReadInt32(readerIn);
             readBlock.IsLast = MetadataBlockHelper.ExtractIsLast(header);
             readBlock.MetadataType = MetadataBlockHelper.ExtractBlockType(header);
-            readBlock.Length = MetadataBlockHelper.ExtractLength(header);
-            readBlock.Data = new byte[readBlock.Length];
-            for (int i = 0; i < readBlock.Data.Length; i++)
-                readBlock.Data[i] = (byte)readerIn.ReadByte();
+            if (readBlock.MetadataType == BLOCK_TYPE.PADDING)
+            {
+                byte readByte = 0;
+                while (readByte == 0)
+                    readByte = (byte)readerIn.ReadByte();
+                readerIn.Seek(-1, SeekOrigin.Current);
+            }
+            else
+            {
+                readBlock.Length = MetadataBlockHelper.ExtractLength(header);
+                readBlock.Data = new byte[readBlock.Length];
+                for (int i = 0; i < readBlock.Data.Length; i++)
+                    readBlock.Data[i] = (byte)readerIn.ReadByte();
+            }
             return SubclassMetadataBlock(readBlock);
         }
 

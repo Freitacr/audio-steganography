@@ -37,7 +37,7 @@ namespace AudioSteganography
             stream.InitializeFile(dlg.FileName);
             stream.MetadataCallback = ProcessMetadata;
             stream.ReadMetadata();
-            
+            stream.ProcessStream(unused => Console.WriteLine(unused));
             //Application.Run(new MainForm());
         }
     }
