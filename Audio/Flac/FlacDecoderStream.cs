@@ -10,9 +10,9 @@ namespace AudioSteganography.Audio.Flac
     {
         private Stream FileStream;
         private List<MetadataBlock> MetadataBlocks;
+        public StreamInfo StreamInfoBlock { get; private set; }
         public Action<MetadataBlock> MetadataCallback { private get; set; }
         public Action<int[]> ReadCallback { private get; set; }
-        
 
         public FlacDecoderStream()
         {
@@ -46,6 +46,7 @@ namespace AudioSteganography.Audio.Flac
             MetadataBlock currentBlock = MetadataBlock.ReadMetadataBlock(FileStream);
             if (currentBlock.MetadataType != MetadataBlock.BLOCK_TYPE.STREAMINFO)
                 throw new ImproperFormatException("Flac file did not start its metadata with a STREAMINFO block");
+            StreamInfoBlock = currentBlock as StreamInfo;
             MetadataBlocks.Add(currentBlock);
             MetadataCallback?.Invoke(currentBlock);
             while (!currentBlock.IsLast)
@@ -62,8 +63,22 @@ namespace AudioSteganography.Audio.Flac
             if (ReadCallback == null)
                 throw new ArgumentNullException("readCallback", "ReadCallback was not set before calling, and was not supplied to this function");
             //Start reading audio frames
-            FlacAudioFrame currFrame = new FlacAudioFrame(this);
-            currFrame.ParseAudioFrame(FileStream);
+            while (true)
+            {
+                FlacAudioFrame currFrame = new FlacAudioFrame(this);
+                try
+                {
+                    currFrame.ParseAudioFrame(FileStream);
+                } catch (EndOfStreamException)
+                {
+                    break;
+                }
+                byte[] streamOracle = new byte[32];
+                FileStream.Read(streamOracle, 0, 32);
+                FileStream.Seek(-32, SeekOrigin.Current);
+            }
+            
+            throw new NotImplementedException();
         }
 
         public List<MetadataBlock>.Enumerator GetMetadataEnumerator()

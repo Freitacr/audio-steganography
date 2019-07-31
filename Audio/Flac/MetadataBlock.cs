@@ -28,7 +28,7 @@ namespace AudioSteganography.Audio.Flac
             int header = ByteHelper.ReadInt32(readerIn);
             readBlock.IsLast = MetadataBlockHelper.ExtractIsLast(header);
             readBlock.MetadataType = MetadataBlockHelper.ExtractBlockType(header);
-            if (readBlock.MetadataType == BLOCK_TYPE.PADDING)
+            if (readBlock.MetadataType == BLOCK_TYPE.PADDING && readBlock.Length == 0)
             {
                 byte readByte = 0;
                 while (readByte == 0)

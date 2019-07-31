@@ -42,10 +42,11 @@ namespace AudioSteganography.Audio.Flac
         public int ChannelAssignment { get; private set; }
         public int SampleSize { get; private set; }
         public long PositionValue { get; private set; }
-        public POSITION_VALUE PositionValueType {get; private set;}
+        public POSITION_VALUE PositionValueType { get; private set; }
         public CHANNEL_ASSIGNMENT ChannelAssignmentType { get; private set; }
         public byte CRC { get; private set; }
         public FlacAudioFrameFooter Footer { get; private set; }
+        public FlacSubFrame[] SubFrames { get; private set; }
         private FlacDecoderStream ParentStream;
 
         public FlacAudioFrame(FlacDecoderStream parentStream)
@@ -56,8 +57,24 @@ namespace AudioSteganography.Audio.Flac
         public void ParseAudioFrame(Stream streamIn)
         {
             ParseHeader(streamIn);
+            SubFrames = new FlacSubFrame[ParentStream.StreamInfoBlock.NumberChannels];
+            BitReader streamReader = new BitReader(streamIn);
+            for (int i = 0; i < SubFrames.Length; i++)
+                SubFrames[i] = FlacSubFrame.ReadSubFrame(streamReader, this);
+            if (streamReader.BitPosition == -1)
+            {
+                if (streamIn.ReadByte() != 0) //Check whether a weird 0 byte occurred before the footer... This shouldn't happen but it has been observed
+                {
+                    streamIn.Seek(-1, SeekOrigin.Current);
+                }
+            } else
+            {
+                streamReader.ClearBuffer();
+            }
+            Footer = new FlacAudioFrameFooter((short)streamReader.ReadSpecifiedBitCount(16));
         }
 
+        
         private void ParseHeader(Stream streamIn)
         {
             ParseSyncCodeAndBlockingStrategy(streamIn);
@@ -74,7 +91,8 @@ namespace AudioSteganography.Audio.Flac
         private void ParseSyncCodeAndBlockingStrategy(Stream streamIn)
         {
             byte[] readBytes = new byte[2];
-            streamIn.Read(readBytes, 0, 2);
+            if (streamIn.Read(readBytes, 0, 2) == 0)
+                throw new EndOfStreamException();
             ushort headerVal = ByteHelper.BytesToShort(readBytes);
             if ((headerVal ^ 0xfff8) != 0)
                 throw new ImproperFormatException("Audio Frame Sync Code was incorrect");
@@ -121,7 +139,7 @@ namespace AudioSteganography.Audio.Flac
             long ret = 0;
             int utfMask = 0x3f;
             int longPosition = 0;
-            for (int i = parsedVector.Length-1; i > 0; i--)
+            for (int i = parsedVector.Length - 1; i > 0; i--)
             {
                 int res = parsedVector[i] & utfMask;
                 res = res << longPosition;
@@ -148,7 +166,7 @@ namespace AudioSteganography.Audio.Flac
 
         private void UpdateBlockSizeToTrueValue(Stream streamIn)
         {
-            switch(InterChannelSampleBlockSize)
+            switch (InterChannelSampleBlockSize)
             {
                 case 0:
                     throw new ImproperFormatException("Parsed block size of 0 is reserved");
@@ -180,7 +198,7 @@ namespace AudioSteganography.Audio.Flac
 
         private void UpdateSampleRateToTrueValue(Stream streamIn)
         {
-            switch(SampleRate)
+            switch (SampleRate)
             {
                 case 0:
                     List<MetadataBlock>.Enumerator metadataEnum = ParentStream.GetMetadataEnumerator();
@@ -241,7 +259,7 @@ namespace AudioSteganography.Audio.Flac
 
         private void UpdateChannelAssignmentToTrueValue()
         {
-            switch(ChannelAssignment)
+            switch (ChannelAssignment)
             {
                 case 0:
                 case 1:
@@ -270,7 +288,7 @@ namespace AudioSteganography.Audio.Flac
 
         private void UpdateSampleSizeToTrueValue()
         {
-            switch(SampleSize)
+            switch (SampleSize)
             {
                 case 0:
                     var enumerator = ParentStream.GetMetadataEnumerator();

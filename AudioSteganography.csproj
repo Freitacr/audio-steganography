@@ -89,11 +89,18 @@
   <ItemGroup>
     <Compile Include="Audio\FileInDecodingStream.cs" />
     <Compile Include="Audio\FileOutEncodingStream.cs" />
+    <Compile Include="Audio\Flac\BitReader.cs" />
     <Compile Include="Audio\Flac\FlacAudioFrame.cs" />
+    <Compile Include="Audio\Flac\FlacConstantSubframe.cs" />
     <Compile Include="Audio\Flac\FlacDecoderStream.cs" />
+    <Compile Include="Audio\Flac\FlacFixedSubframe.cs" />
+    <Compile Include="Audio\Flac\FlacLPCSubframe.cs" />
+    <Compile Include="Audio\Flac\FlacResidual.cs" />
     <Compile Include="Audio\Flac\FlacSubFrame.cs" />
+    <Compile Include="Audio\Flac\FlacVerbatimSubframe.cs" />
     <Compile Include="Audio\Flac\ImproperFormatException.cs" />
     <Compile Include="Audio\Flac\MetadataBlock.cs" />
+    <Compile Include="Audio\Flac\RiceHelper.cs" />
     <Compile Include="Audio\Flac\StreamInfoBlock.cs" />
     <Compile Include="Audio\Flac\VorbisComment.cs" />
     <Compile Include="Audio\Wave\WaveFileHeader.cs" />
