@@ -23,12 +23,14 @@ namespace AudioSteganography.Audio.Flac
 
         public void ReadContainedSamples(BitReader readerIn)
         {
+            /*
             byte[] streamOracle = new byte[32];
             for (int i = 0; i < streamOracle.Length; i++)
             {
                 streamOracle[i] = readerIn.ReadByte();
             }
             throw new NotImplementedException();
+            */
             ReadWarmupSamples(readerIn);
             ReadCoefficientPrecision(readerIn);
             ReadCoefficientShift(readerIn);
@@ -47,9 +49,10 @@ namespace AudioSteganography.Audio.Flac
 
         private void ReadCoefficientPrecision(BitReader readerIn)
         {
-            CoefficientPrecision = (byte)(readerIn.ReadSpecifiedBitCount(4)+1);
-            if ((CoefficientPrecision ^ 0x10) == 0)
+            CoefficientPrecision = (byte)(readerIn.ReadSpecifiedBitCount(4));
+            if ((CoefficientPrecision ^ 0xF) == 0)
                 throw new ImproperFormatException("LPC Subframe Coefficient Precision was the invalid value");
+            CoefficientPrecision++;
         }
 
         private void ReadCoefficientShift(BitReader readerIn)

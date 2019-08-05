@@ -17,6 +17,13 @@ namespace AudioSteganography.Audio.Flac
 
         public void ReadContainedSamples(BitReader readerIn)
         {
+            
+            //byte[] streamOracle = new byte[8192];
+            //for (int i = 0; i < streamOracle.Length; i++)
+            //{
+            //    streamOracle[i] = readerIn.ReadByte();
+            //}
+            
             ReadWarmupSamples(readerIn);
             ContainedResidual = new FlacResidual(this);
             ContainedResidual.ParseResidual(readerIn);

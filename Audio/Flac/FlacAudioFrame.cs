@@ -59,19 +59,32 @@ namespace AudioSteganography.Audio.Flac
             ParseHeader(streamIn);
             SubFrames = new FlacSubFrame[ParentStream.StreamInfoBlock.NumberChannels];
             BitReader streamReader = new BitReader(streamIn);
+            int frameSampleSizeSaved = SampleSize;
             for (int i = 0; i < SubFrames.Length; i++)
-                SubFrames[i] = FlacSubFrame.ReadSubFrame(streamReader, this);
-            if (streamReader.BitPosition == -1)
             {
-                if (streamIn.ReadByte() != 0) //Check whether a weird 0 byte occurred before the footer... This shouldn't happen but it has been observed
+                switch(ChannelAssignmentType)
                 {
-                    streamIn.Seek(-1, SeekOrigin.Current);
+                    case CHANNEL_ASSIGNMENT.LEFT_SIDE_STEREO:
+                        if (i == 1)
+                            SampleSize++;
+                        break;
+                    case CHANNEL_ASSIGNMENT.RIGHT_SIDE_STEREO:
+                        if (i == 0)
+                            SampleSize++;
+                        break;
+                    case CHANNEL_ASSIGNMENT.MID_SIDE_STEREO:
+                        if (i == 1)
+                            SampleSize++;
+                        break;
+                    default: break;
                 }
-            } else
-            {
-                streamReader.ClearBuffer();
+
+                SubFrames[i] = FlacSubFrame.ReadSubFrame(streamReader, this);
+                SampleSize = frameSampleSizeSaved;
             }
+            streamReader.ClearBuffer();
             Footer = new FlacAudioFrameFooter((short)streamReader.ReadSpecifiedBitCount(16));
+            Console.WriteLine("Finished Processing of frame: " + PositionValue);
         }
 
         

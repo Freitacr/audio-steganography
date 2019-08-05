@@ -27,6 +27,8 @@ namespace AudioSteganography.Audio.Flac
 
         public static FlacSubFrame ReadSubFrame(BitReader streamIn, FlacAudioFrame parentFrame)
         {
+            if (parentFrame.PositionValue == 127)
+                Console.WriteLine("Found problem frame");
             FlacSubFrame ret = new FlacSubFrame(parentFrame);
             ret.Header = new FlacSubFrameHeader(streamIn);
             return SubclassSubFrame(ret, streamIn);
